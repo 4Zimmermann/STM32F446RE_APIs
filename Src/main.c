@@ -17,10 +17,62 @@
  */
 
 #include <stdint.h>
+#include <stdbool.h>
+#include <stm32f4xx.h>
+
+#include <mcalSysTick.h>
+#include <mcalGPIO.h>
+#include <mcalSPI.h>
+
+/*
+ * Globale Variablen
+ */
+bool timerTrigger = false;
 
 
 int main(void)
 {
-    /* Loop forever */
-	for(;;);
+	uint32_t mainTimer0 = 0UL;
+	uint32_t mainTimer1 = 0UL;
+	uint32_t *timerListe[] = {&mainTimer0, &mainTimer1};
+	uint8_t arraySize = sizeof(timerListe) / sizeof(uint32_t);
+
+	systickInit(SYSTICK_1MS);
+	systickSetMillis(&mainTimer0, 200);
+	systickSetMillis(&mainTimer1, 500);
+
+	gpioInitPort(GPIOA);
+	gpioSelectPinMode(GPIOA, PIN5, OUTPUT);
+	gpioSetOutputType(GPIOA, PIN5, PUSHPULL);
+	gpioSelectPushPullMode(GPIOA, PIN5, PULLUP);
+
+
+	// UART Init
+
+	// GPIO Alternate Funktions
+	gpioInitPort(GPIOC);
+	gpioSelectAltFunc(GPIOC, PIN9, AF7); // PC8 UART5_RTS
+	// PA0  UART4_TX
+	// PA1  UART4_RX
+	// PC9  UART5_CTS
+
+	/* Loop forever */
+	while(1)
+	{
+		if(timerTrigger == true)
+		{
+			systickUpdateTimerList((uint32_t*) timerListe, arraySize);
+		}
+
+		if(isSystickExpired(mainTimer0))
+		{
+			systickSetMillis(&mainTimer0, 200);
+		}
+
+		if(isSystickExpired(mainTimer1))
+		{
+			systickSetMillis(&mainTimer1, 500);
+			gpioTogglePin(GPIOA, PIN5);
+		}
+	}
 }
